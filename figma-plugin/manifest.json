@@ -4,11 +4,19 @@
   "api": "1.0.0",
   "main": "code.js",
   "ui": "ui.html",
-  "editorType": ["figma"],
+  "editorType": [
+    "figma"
+  ],
   "documentAccess": "dynamic-page",
   "networkAccess": {
-    "allowedDomains": ["none"],
-    "devAllowedDomains": ["http://localhost:7777", "ws://localhost:7777"],
-    "reasoning": "Talks only to the local NGA Figma Bridge server on this machine."
+    "allowedDomains": [
+      "http://localhost:7777",
+      "ws://localhost:7777"
+    ],
+    "devAllowedDomains": [
+      "http://localhost:7777",
+      "ws://localhost:7777"
+    ],
+    "reasoning": "Connects only to the local NGA Figma Bridge hub on this machine (started by Claude Code) so Claude can read and edit the open file. No data leaves your machine."
   }
 }

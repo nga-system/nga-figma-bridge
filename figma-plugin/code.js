@@ -26,7 +26,7 @@ const H = {
 // ---------- ctx: shared helpers handed to every handler ----------
 const ctx = {
   VERSION, BridgeError, fail,
-  protectedPages: ['Original_Design'],
+  protectedPages: [], // set by the hub (NGA_PROTECTED)
   job: null,
   progress(done, total, label) {
     if (ctx.job) figma.ui.postMessage({ type: 'progress', id: ctx.job, done, total, label });

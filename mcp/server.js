@@ -24896,7 +24896,7 @@ var bridgeP = startBridge({
   port: Number(process.env.NGA_PORT ?? 7777),
   handlersDir: join2(ROOT, "handlers"),
   root: process.env.NGA_ROOT,
-  protectedPages: (process.env.NGA_PROTECTED ?? "Original_Design").split(",").map((s) => s.trim()).filter(Boolean),
+  protectedPages: (process.env.NGA_PROTECTED ?? "").split(",").map((s) => s.trim()).filter(Boolean),
   remote: process.env.NGA_HUB,
   log
 });
@@ -24977,7 +24977,7 @@ if (process.argv[2] === "serve") {
     inputSchema: { page: string2().optional(), ids: array(string2()).optional(), timeoutMs: timeout }
   }, async ({ timeoutMs, ...a }) => run("audit", a, timeoutMs ?? 600000));
   server.registerTool("figma_tokens_apply", {
-    description: "Create variables from a token preset and bind them (modes, fonts, colors, radius, spacing, type). preset: bundled name (e.g. goodwill) or a JSON file path.",
+    description: "Create variables from a token preset and bind them (modes, fonts, colors, radius, spacing, type). preset: bundled name (e.g. example) or a JSON file path.",
     inputSchema: { preset: string2(), ids: array(string2()).optional(), page: string2().optional(), steps: array(_enum(["modes", "fonts", "bind"])).optional(), timeoutMs: timeout }
   }, async ({ preset, timeoutMs, ...a }) => {
     try {

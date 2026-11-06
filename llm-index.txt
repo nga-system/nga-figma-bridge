@@ -8,10 +8,11 @@ cli/ → fb.ts: CLI over ssh to a remote hub (status, reload, put, any command);
 figma-plugin/ → llm-index.txt
 handlers/ → llm-index.txt
 mcp/ → llm-index.txt
-presets/ → goodwill.json: token preset (colors, layout per Desktop/Tablet/Mobile, font map) for tokens.*
+presets/ → example.json: sample token preset (colors, layout per Desktop/Tablet/Mobile, font map) for tokens.apply
 skills/ → nga-figma-bridge/SKILL.md: how Claude uses the figma_* tools, connect flow, rules, remote mode
 
 ## files
+LICENSE: MIT
 .mcp.json: MCP server entry (node ${CLAUDE_PLUGIN_ROOT}/mcp/server.js)
 README.md: install (marketplace + Figma import), MCP tools, remote setup, CLI, contract, limits
 build.ts: bundles figma-plugin/code.js (core + handlers) and mcp/server.js (node target)

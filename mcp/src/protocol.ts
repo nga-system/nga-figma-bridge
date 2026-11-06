@@ -8,7 +8,7 @@ export const ERROR_CODES = [
   "INVALID_INPUT", // args failed validation
   "UNKNOWN_COMMAND", // no handler registered under that name
   "NOT_FOUND", // node / page / variable id does not resolve
-  "PAGE_PROTECTED", // write aimed at a protected page (default: Original_Design)
+  "PAGE_PROTECTED", // write aimed at a protected page (NGA_PROTECTED)
   "PLUGIN_OFFLINE", // no plugin connected to the server
   "TIMEOUT", // server stopped waiting; the plugin job may still be running (see /status)
   "EXEC_UNSUPPORTED", // plugin sandbox refuses eval / new Function

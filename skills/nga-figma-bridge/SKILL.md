@@ -31,14 +31,14 @@ Claude Code starts the hub automatically. Nothing else to run when Figma is on t
 | `figma_screenshot` | see a node (returns the image; `out` also saves it) |
 | `figma_html` | render a local `.html` file (`file`), a `url` or an `html` string into Figma. Use `replaceId` to redo a frame in place |
 | `figma_audit` | fonts in use, raw (unbound) colors, text overflow |
-| `figma_tokens_apply` | create and bind variables from a preset (`goodwill` is bundled, or a JSON path) |
+| `figma_tokens_apply` | create and bind variables from a preset (`example` is bundled; pass a JSON path for your own) |
 | `figma_command` | every other command: `resize move rename delete clone reparent radius fill stroke text autolayout frame component.create instance.create instance.swapIn vars.list vars.ensure vars.bind vars.mode tokens.values fit.textBoxes batch select selection page.set nodes` |
 | `figma_exec` | last resort JS in the plugin sandbox |
 | `figma_reload_handlers` | push edited `handlers/*.js` now |
 
 ## Rules
 
-- Pages named in `NGA_PROTECTED` (default `Original_Design`) are read-only. Writes fail with `PAGE_PROTECTED`. Do not work around it.
+- Pages named in `NGA_PROTECTED` (default none) are read-only. Writes fail with `PAGE_PROTECTED`. Do not work around it.
 - `figma_exec` bypasses the guard. Never use it to write near a protected page.
 - Group many small edits into one `figma_command` `batch` call: `{"cmd":"batch","args":{"ops":[{"cmd":"rename","args":{...}}]}}`.
 - Long jobs (`html`, `audit`, `tokens.apply`) default to a 10-minute timeout. `TIMEOUT` means the hub stopped waiting, not that Figma stopped; check `figma_status` jobs before retrying.

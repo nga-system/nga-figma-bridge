@@ -14,7 +14,7 @@ No server to run by hand. Claude Code starts `mcp/server.js` from `.mcp.json` wh
 
 Figma runs only one plugin at a time per file. Under DesignAgent, variables and fonts needed a separate plugin, so the bridge kept disconnecting and every step needed a manual run. This plugin does everything:
 
-- Works across pages (`documentAccess: dynamic-page`). Writes are blocked on protected pages (default `Original_Design`).
+- Works across pages (`documentAccess: dynamic-page`). Pages listed in `NGA_PROTECTED` are read-only (writes fail with `PAGE_PROTECTED`).
 - Variables: create, bind, set modes. Fonts: family, weight and line height.
 - Token presets (`presets/*.json`).
 - `html`: renders an HTML page into Figma nodes. The layout is computed by the browser inside the plugin UI, so no headless browser is involved.
@@ -26,7 +26,7 @@ Figma runs only one plugin at a time per file. Under DesignAgent, variables and 
 
 1. Claude Code (needs `node` on PATH):
    ```
-   /plugin marketplace add nga-system/nga-figma-birdge   # or a local path to this folder
+   /plugin marketplace add nga-system/nga-figma-bridge   # or a local path to this folder
    /plugin install nga-figma-bridge@nextgenai
    ```
    Restart Claude Code. The `figma_*` tools appear.
@@ -39,35 +39,37 @@ Several Claude sessions share one hub: the first owns port 7777, later ones rela
 One-step install (Claude Code 2.1.275+):
 
 ```
-/plugin install nga-figma-bridge --marketplace nga-system/nga-figma-birdge
+/plugin install nga-figma-bridge --marketplace nga-system/nga-figma-bridge
 ```
 
 ## MCP tools
 
 `figma_status` `figma_pages` `figma_find` `figma_spec` `figma_screenshot` `figma_html` (file / url / html) `figma_audit` `figma_tokens_apply` `figma_command` (any command below) `figma_exec` `figma_reload_handlers`. Usage rules live in `skills/nga-figma-bridge/SKILL.md`.
 
-## Figma on another machine (mac-mini setup)
+## Figma on another machine
 
-`./deploy.sh [host]` builds, copies the Figma plugin to `~/nga-figma-bridge/plugin/`, and starts the hub there (`bun mcp/server.js serve`, port 7777, `NGA_ROOT=~/figma-redesign`). Then either:
+`./deploy.sh <ssh host>` builds, copies the Figma plugin to `~/nga-figma-bridge/plugin/` on that host, and starts the hub there (`bun mcp/server.js serve`, port 7777, static files from `NGA_ROOT`, default `~/nga-figma-bridge/files`). Example: `NGA_PROTECTED="Original" ./deploy.sh figma-host`. Then either:
 
 - Use the CLI below over ssh, or
 - Tunnel (`ssh -N -L 7778:127.0.0.1:7777 <host>`) and start Claude Code with `NGA_HUB=http://127.0.0.1:7778`.
 
-Environment: `NGA_PORT` (7777; the Figma plugin connects to 7777) · `NGA_PROTECTED` (comma list, default `Original_Design`) · `NGA_ROOT` (static `/files` root) · `NGA_HUB` (use a remote hub).
+Environment: `NGA_PORT` (7777; the Figma plugin connects to 7777) · `NGA_PROTECTED` (comma list of read-only page names, default none) · `NGA_ROOT` (static `/files` root) · `NGA_HUB` (use a remote hub).
 
 ## CLI (remote setup)
+
+Set `NGA_HOST=<ssh host>` (or pass `--host`). `bun cli/selftest.ts` runs a live end-to-end check.
 
 
 ```sh
 bun cli/fb.ts status                                    # connection, plugin version, jobs in progress
 bun cli/fb.ts pages
-bun cli/fb.ts find '{"page":"Visual Redesign","name":"· desktop","deep":false}'
-bun cli/fb.ts spec '{"id":"26:133251","depth":2}'
-bun cli/fb.ts screenshot '{"id":"26:133251","scale":0.5}' --out home.png
-bun cli/fb.ts html '{"url":"site/home-desktop.html","width":1440,"page":"Visual Redesign","x":0,"y":0}' --timeout 600000
-bun cli/fb.ts html '{"url":"site/home-desktop.html","width":1440,"replaceId":"26:133251"}'
-bun cli/fb.ts tokens.apply '{"ids":["26:133251"]}' --preset goodwill
-bun cli/fb.ts audit '{"page":"Visual Redesign"}' --timeout 600000
+bun cli/fb.ts find '{"page":"Design","name":"Home","deep":false}'
+bun cli/fb.ts spec '{"id":"12:345","depth":2}'
+bun cli/fb.ts screenshot '{"id":"12:345","scale":0.5}' --out home.png
+bun cli/fb.ts html '{"url":"site/home.html","width":1440,"page":"Design","x":0,"y":0}' --timeout 600000
+bun cli/fb.ts html '{"url":"site/home.html","width":1440,"replaceId":"12:345"}'
+bun cli/fb.ts tokens.apply '{"ids":["12:345"]}' --preset example        # or --preset ./my-brand.json
+bun cli/fb.ts audit '{"page":"Design"}' --timeout 600000
 bun cli/fb.ts batch '{"ops":[{"cmd":"resize","args":{"id":"1:2","width":200}},{"cmd":"rename","args":{"id":"1:2","name":"x"}}]}'
 bun cli/fb.ts exec '{"code":"return figma.currentPage.name"}'
 bun cli/fb.ts put ./site/new.html site/new.html          # upload a file under the server root
@@ -123,3 +125,7 @@ DesignAgent mapping:
 - `handlers/*.js`: the hub watches the folder and pushes changes live (remote: `./deploy.sh`).
 - `figma-plugin/core.js` · `ui.html` · `manifest.json`: rebuild, then close and reopen the plugin in Figma.
 - `mcp/src/*`: rebuild, then restart Claude Code (remote: `./deploy.sh` restarts the hub; the plugin reconnects on its own).
+
+## License
+
+MIT — see `LICENSE`.

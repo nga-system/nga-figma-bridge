@@ -13,6 +13,7 @@
     "design-tokens"
   ],
   "mcpServers": "./.mcp.json",
-  "homepage": "https://github.com/nga-system/nga-figma-birdge",
-  "repository": "https://github.com/nga-system/nga-figma-birdge"
+  "homepage": "https://github.com/nga-system/nga-figma-bridge",
+  "repository": "https://github.com/nga-system/nga-figma-bridge",
+  "license": "MIT"
 }

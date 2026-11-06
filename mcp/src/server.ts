@@ -1,7 +1,7 @@
 // NGA Figma Bridge — MCP stdio server (Claude Code launches it from .mcp.json; no manual server needed).
 //   node mcp/server.js          MCP over stdio + hub on 127.0.0.1:7777 (relays if another session owns the port)
 //   node mcp/server.js serve    hub only (headless machine running Figma, reached through NGA_HUB / ssh -L)
-// env: NGA_PORT (7777) · NGA_PROTECTED (Original_Design, comma list) · NGA_ROOT (static /files root) · NGA_HUB (remote hub URL)
+// env: NGA_PORT (7777) · NGA_PROTECTED (comma list of read-only page names, default none) · NGA_ROOT (static /files root) · NGA_HUB (remote hub URL)
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
@@ -21,7 +21,7 @@ const bridgeP = startBridge({
   port: Number(process.env.NGA_PORT ?? 7777),
   handlersDir: join(ROOT, "handlers"),
   root: process.env.NGA_ROOT,
-  protectedPages: (process.env.NGA_PROTECTED ?? "Original_Design").split(",").map((s) => s.trim()).filter(Boolean),
+  protectedPages: (process.env.NGA_PROTECTED ?? "").split(",").map((s) => s.trim()).filter(Boolean),
   remote: process.env.NGA_HUB,
   log,
 });
@@ -98,7 +98,7 @@ if (process.argv[2] === "serve") {
   }, async ({ timeoutMs, ...a }) => run("audit", a, timeoutMs ?? 600_000));
 
   server.registerTool("figma_tokens_apply", {
-    description: "Create variables from a token preset and bind them (modes, fonts, colors, radius, spacing, type). preset: bundled name (e.g. goodwill) or a JSON file path.",
+    description: "Create variables from a token preset and bind them (modes, fonts, colors, radius, spacing, type). preset: bundled name (e.g. example) or a JSON file path.",
     inputSchema: { preset: z.string(), ids: z.array(z.string()).optional(), page: z.string().optional(), steps: z.array(z.enum(["modes", "fonts", "bind"])).optional(), timeoutMs: timeout },
   }, async ({ preset, timeoutMs, ...a }) => {
     try { return await run("tokens.apply", { ...a, preset: loadPreset(preset) }, timeoutMs ?? 600_000); }

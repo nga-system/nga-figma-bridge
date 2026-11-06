@@ -1,10 +1,13 @@
 // End-to-end self test against the live plugin. Leaves no nodes behind (test frame is deleted).
-// usage: bun cli/selftest.ts [--host mac-mini] [--page "Visual Redesign"] [--html site/home-desktop.html]
+// usage: bun cli/selftest.ts --host <ssh host> [--page <page name>] [--url <path under NGA_ROOT>]
+// Without --page the test frame goes to the current page; without --url a built-in HTML sample is rendered.
 const argv = process.argv.slice(2);
-const flag = (n: string, d: string) => { const i = argv.indexOf(`--${n}`); return i >= 0 ? argv[i + 1] : d; };
-const host = flag("host", "mac-mini");
-const page = flag("page", "Visual Redesign");
-const html = flag("html", "site/home-desktop.html");
+const flag = (n: string, d?: string) => { const i = argv.indexOf(`--${n}`); return i >= 0 ? argv[i + 1] : d; };
+const host = flag("host", process.env.NGA_HOST);
+if (!host) { console.error("set NGA_HOST or pass --host <ssh host running Figma>"); process.exit(2); }
+const page = flag("page");
+const url = flag("url");
+const SAMPLE = `<!doctype html><html><body style="margin:0;font-family:Inter,sans-serif"><main style="display:flex;flex-direction:column;gap:24px;padding:64px;background:#F5F7FB"><h1 style="margin:0;font-size:56px;color:#14161C">NGA Figma Bridge</h1><p style="margin:0;font-size:18px;color:#3D4250">Self test render: flex column → auto-layout, text, fills.</p><div style="display:flex;gap:16px"><span style="padding:12px 20px;border-radius:12px;background:#2F5BEA;color:#fff">Primary</span><span style="padding:12px 20px;border-radius:12px;border:1px solid #E2E6EF;color:#14161C">Secondary</span></div></main></body></html>`;
 const FB = `${import.meta.dir}/fb.ts`;
 
 function fb(cmd: string, args: unknown = {}, timeout = 120000) {
@@ -37,7 +40,7 @@ const ex = fb("exec", { code: "return 1 + 1" });
 check("exec", ex.code === 0 && ex.data === 2, ex.data ?? ex.err);
 
 const t0 = Date.now();
-const made = fb("html", { url: html, width: 1440, page, x: -20000, y: -20000, name: "nga-selftest" }, 600000);
+const made = fb("html", { ...(url ? { url } : { html: SAMPLE }), width: 1440, ...(page ? { page } : {}), x: -20000, y: -20000, name: "nga-selftest" }, 600000);
 check("html render", made.code === 0 && made.data?.id, made.data ?? made.err);
 if (made.data?.id) {
   console.log(`     html: ${made.data.nodes} nodes · ${made.data.width}x${Math.round(made.data.height)} · ${((Date.now() - t0) / 1000).toFixed(1)}s · missingFonts=${JSON.stringify(made.data.missingFonts)} · warnings=${made.data.warnings.length}`);

@@ -16,5 +16,6 @@
   "scripts": {
     "build": "bun build src/server.ts --target=node --format=esm --outfile server.js",
     "typecheck": "tsc --noEmit --strict --module esnext --moduleResolution bundler --target es2022 --types node --skipLibCheck src/server.ts"
-  }
+  },
+  "license": "MIT"
 }

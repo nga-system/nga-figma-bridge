@@ -1,0 +1,25 @@
+{
+  "colorCollection": "Brand · Color",
+  "colors": {
+    "color/brand": "#2F5BEA", "color/brand-deep": "#1C3AA9", "color/ink": "#14161C", "color/body": "#3D4250",
+    "color/muted": "#7A8091", "color/surface": "#F5F7FB", "color/line": "#E2E6EF", "color/white": "#FFFFFF"
+  },
+  "layoutCollection": "Brand · Layout",
+  "modes": ["Desktop", "Tablet", "Mobile"],
+  "viewPattern": "(desktop|tablet|mobile)",
+  "viewModes": { "desktop": 0, "tablet": 1, "mobile": 2 },
+  "layout": {
+    "radius/large": [32, 24, 16], "radius/small": [12, 10, 8],
+    "space/page-x": [120, 48, 20], "space/gap": [32, 24, 16], "space/section": [120, 96, 64],
+    "type/display": [72, 56, 40], "type/h2": [44, 36, 28], "type/h3": [24, 22, 20], "type/body": [18, 17, 16]
+  },
+  "groups": {
+    "radius": ["radius/large", "radius/small"],
+    "type": ["type/display", "type/h2", "type/h3", "type/body"],
+    "spacing": [["paddingLeft", ["space/page-x"]], ["paddingRight", ["space/page-x"]], ["itemSpacing", ["space/gap"]], ["paddingTop", ["space/section"]]]
+  },
+  "font": {
+    "family": "Inter",
+    "styleMap": { "Regular": "Regular", "Medium": "Medium", "Semi Bold": "Semi Bold", "SemiBold": "Semi Bold", "Bold": "Bold", "Extra Bold": "Extra Bold", "Black": "Black", "Light": "Light" }
+  }
+}
