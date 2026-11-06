@@ -1,0 +1,18 @@
+# nga-figma-bridge
+ROLE: tool · Claude Code plugin (MCP hub) + Figma plugin that replaces the DesignAgent Claude Bridge
+Claude Code launches mcp/server.js over stdio (.mcp.json); it owns 127.0.0.1:7777 (or relays to the session that does) and talks to the Figma plugin over WebSocket. Handlers are hot-reloaded into the plugin. For Figma on another machine, deploy.sh runs the same hub in `serve` mode there and cli/fb.ts reaches it over ssh.
+
+## dirs
+.claude-plugin/ → llm-index.txt
+cli/ → fb.ts: CLI over ssh to a remote hub (status, reload, put, any command); selftest.ts: live end-to-end checks
+figma-plugin/ → llm-index.txt
+handlers/ → llm-index.txt
+mcp/ → llm-index.txt
+presets/ → goodwill.json: token preset (colors, layout per Desktop/Tablet/Mobile, font map) for tokens.*
+skills/ → nga-figma-bridge/SKILL.md: how Claude uses the figma_* tools, connect flow, rules, remote mode
+
+## files
+.mcp.json: MCP server entry (node ${CLAUDE_PLUGIN_ROOT}/mcp/server.js)
+README.md: install (marketplace + Figma import), MCP tools, remote setup, CLI, contract, limits
+build.ts: bundles figma-plugin/code.js (core + handlers) and mcp/server.js (node target)
+deploy.sh: build, scp plugin/hub/handlers/presets to a Figma host, restart hub by port

@@ -1,0 +1,254 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  /* tokens — one accent (violet). depth from luminance, not shadows. */
+  :root {
+    --bg: #0b0a12; --text: #eceaf6; --muted: #9b97ae; --line: rgba(255,255,255,.12);
+    --accent: #8c7bff; --accent-hi: #a99cff; --on-accent: #0b0a12; --danger: #ff7a8c;
+    --dur: 250ms; --ease: cubic-bezier(.2,.8,.2,1);
+  }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--text);
+    font: 12px/1.4 -apple-system, BlinkMacSystemFont, "Pretendard", sans-serif; -webkit-font-smoothing: antialiased; }
+  #fx { position: fixed; inset: 0; width: 100%; height: 100%; }
+  .center { position: relative; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; text-align: center; }
+  .view { display: none; flex-direction: column; align-items: center; gap: 6px; }
+  body[data-state="idle"] .v-idle, body[data-state="error"] .v-idle { display: flex; }
+  body[data-state="connecting"] .v-wait, body[data-state="reconnecting"] .v-wait { display: flex; }
+  body[data-state="connected"] .v-on { display: flex; }
+  .btn { appearance: none; border: 0; border-radius: 999px; min-width: 112px; height: 36px; padding: 0 20px; cursor: pointer;
+    background: var(--accent); color: var(--on-accent); font: 600 13px/1 inherit; letter-spacing: .02em;
+    transition: background var(--dur) var(--ease), transform var(--dur) var(--ease); }
+  .btn:hover { background: var(--accent-hi); }
+  .btn:active { transform: scale(.97); }
+  .btn:focus-visible, .link:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .link { appearance: none; background: none; border: 0; padding: 2px 6px; border-radius: 6px; cursor: pointer; color: var(--muted); font: 11px/1.2 inherit; text-decoration: underline; text-underline-offset: 2px; }
+  .link:hover { color: var(--text); }
+  .title { font-size: 13px; font-weight: 600; letter-spacing: .02em; display: inline-flex; align-items: center; gap: 7px; }
+  .pip { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+  body[data-state="connected"] .pip { animation: pip 1.6s var(--ease) infinite alternate; }
+  @keyframes pip { from { opacity: .45; transform: scale(.85); } to { opacity: 1; transform: scale(1); } }
+  .cap, .title, .link { text-shadow: 0 0 6px rgba(11,10,18,.95), 0 0 2px rgba(11,10,18,.95); }
+  .cap { color: var(--muted); font-size: 11px; max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cap.err { color: var(--danger); }
+  .bar { width: 120px; height: 3px; border-radius: 2px; background: var(--line); overflow: hidden; opacity: 0; transition: opacity var(--dur) var(--ease); }
+  .bar.show { opacity: 1; }
+  .bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width var(--dur) var(--ease); }
+  @media (prefers-reduced-motion: reduce) { .btn, .bar, .bar > i { transition: none; } body[data-state="connected"] .pip { animation: none; } }
+  /* kept inside the viewport (opacity 0): offscreen frames get throttled by Chromium */
+  .stage { position: fixed; left: 0; top: 0; border: 0; height: 900px; opacity: 0; pointer-events: none; z-index: -1; }
+</style>
+</head>
+<body data-state="idle">
+<canvas id="fx" aria-hidden="true"></canvas>
+<main class="center">
+  <div class="view v-idle">
+    <button id="connect" class="btn" type="button">연결</button>
+    <div id="idleCap" class="cap">NGA Figma Bridge · localhost:7777</div>
+  </div>
+  <div class="view v-wait">
+    <button class="btn" type="button" disabled id="waitBtn">연결 중…</button>
+    <div id="waitCap" class="cap">서버를 찾는 중</div>
+    <button id="cancel" class="link" type="button">취소</button>
+  </div>
+  <div class="view v-on" aria-live="polite">
+    <div class="title"><span class="pip"></span>연결됨</div>
+    <div id="job" class="cap">대기 중</div>
+    <div id="bar" class="bar"><i></i></div>
+    <button id="disconnect" class="link" type="button">연결 해제</button>
+  </div>
+</main>
+<script>
+const SERVER = 'localhost:7777';
+const $ = (id) => document.getElementById(id);
+const toMain = (m) => parent.postMessage({ pluginMessage: m }, '*');
+let ws = null, backoff = 500, hello = null, wanted = false, retryTimer = null, busy = false;
+
+// ---------- state ----------
+function setState(s, cap) {
+  document.body.dataset.state = s;
+  if (s === 'error') { $('idleCap').textContent = cap || '서버에 연결할 수 없습니다'; $('idleCap').classList.add('err'); $('connect').textContent = '다시 연결'; }
+  if (s === 'idle') { $('idleCap').textContent = 'NGA Figma Bridge · localhost:7777'; $('idleCap').classList.remove('err'); $('connect').textContent = '연결'; }
+  if (s === 'connecting' || s === 'reconnecting') { $('waitBtn').textContent = s === 'connecting' ? '연결 중…' : '재연결 중…'; $('waitCap').textContent = cap || '서버를 찾는 중'; }
+  FX.target = { idle: 0.08, error: 0.04, connecting: 0.45, reconnecting: 0.3, connected: 1 }[s] ?? 0.1;
+}
+function setJob(text, pct) {
+  $('job').textContent = text;
+  const bar = $('bar');
+  bar.classList.toggle('show', pct != null);
+  bar.firstElementChild.style.width = pct == null ? '0' : `${pct}%`;
+  FX.busyTarget = busy ? 1 : 0;
+}
+
+// ---------- connection ----------
+function connect() {
+  clearTimeout(retryTimer);
+  wanted = true;
+  let opened = false;
+  setState(backoff > 500 ? 'reconnecting' : 'connecting');
+  try { ws = new WebSocket(`ws://${SERVER}/plugin`); } catch (e) { return fail(); }
+  ws.onopen = () => { opened = true; backoff = 500; setState('connected'); setJob(hello ? ver() : '대기 중', null); toMain({ type: 'uiReady' }); };
+  ws.onclose = () => { ws = null; if (!wanted) return setState('idle'); fail(opened); };
+  ws.onerror = () => {};
+  ws.onmessage = (ev) => {
+    let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+    if (m.type === 'rpc') { busy = true; setJob(`실행: ${m.cmd}`, 0); }
+    if (m.type === 'ping') { send({ type: 'pong' }); return; }
+    toMain(m);
+  };
+}
+function fail(wasOpen) {
+  if (!wanted) return setState('idle');
+  const sec = Math.round(backoff / 1000) || 1;
+  setState('reconnecting', wasOpen ? `연결이 끊겼습니다 · ${sec}초 뒤 재시도` : `서버 응답 없음 · ${sec}초 뒤 재시도`);
+  retryTimer = setTimeout(connect, backoff);
+  backoff = Math.min(backoff * 2, 10000);
+}
+function disconnect() { wanted = false; clearTimeout(retryTimer); backoff = 500; if (ws) ws.close(); else setState('idle'); }
+function send(m) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(m)); }
+const ver = () => `대기 중 · v${hello.version}${hello.evalSupported ? ' · live' : ''}`;
+setInterval(() => send({ type: 'pong' }), 15000);
+$('connect').onclick = connect;
+$('cancel').onclick = disconnect;
+$('disconnect').onclick = disconnect;
+
+onmessage = async (ev) => {
+  const m = ev.data && ev.data.pluginMessage;
+  if (!m) return;
+  if (m.type === 'hello') { hello = m; if (!busy) setJob(ver(), null); send(m); return; }
+  if (m.type === 'progress') { setJob(`${m.label || '진행'} ${m.done}/${m.total}`, m.total ? Math.round(100 * m.done / m.total) : 0); send(m); return; }
+  if (m.type === 'result') { busy = false; setJob(m.result.ok ? (hello ? ver() : '완료') : `오류 · ${m.result.error.code}`, null); send(m); return; }
+  if (m.type === 'handlersLoaded') { send(m); return; }
+  if (m.type === 'uiReq') {
+    try { const data = await UI_TASKS[m.kind](m.payload); toMain({ type: 'uiRes', rid: m.rid, ok: true, data }); }
+    catch (e) { toMain({ type: 'uiRes', rid: m.rid, ok: false, error: String(e && e.message || e) }); }
+  }
+};
+
+// ---------- ambient field: ripple lattice + flowing waves; energy encodes connection state ----------
+const FX = { energy: 0.08, target: 0.08, busy: 0, busyTarget: 0 };
+(function fx() {
+  const cv = $('fx'), g = cv.getContext('2d');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+  let W = 0, H = 0, dpr = 1;
+  const size = () => { dpr = devicePixelRatio || 1; W = innerWidth; H = innerHeight; cv.width = W * dpr; cv.height = H * dpr; g.setTransform(dpr, 0, 0, dpr, 0, 0); };
+  addEventListener('resize', size); size();
+  const A = [140, 123, 255];
+  const rgba = (a) => `rgba(${A[0]},${A[1]},${A[2]},${a.toFixed(3)})`;
+  // ambient field: glow-dot lattice + flowing waves (original layout).
+  // dots: each twinkles on its own random clock, and opacity drifts region by region
+  // (a slow noise field moving across the window). energy = connection state;
+  // busy = per-dot glow flicker + choppier, brighter waves.
+  const seed = (i) => { const x = Math.sin(i * 127.1) * 43758.5453; return x - Math.floor(x); };
+  const SPR = document.createElement('canvas'); SPR.width = SPR.height = 32;
+  (() => { const s = SPR.getContext('2d'); const gr = s.createRadialGradient(16, 16, 0, 16, 16, 16);
+    gr.addColorStop(0, 'rgba(235,230,255,1)'); gr.addColorStop(0.18, 'rgba(176,164,255,.95)');
+    gr.addColorStop(0.45, 'rgba(140,123,255,.35)'); gr.addColorStop(1, 'rgba(140,123,255,0)');
+    s.fillStyle = gr; s.fillRect(0, 0, 32, 32); })();
+  // smooth 2D field in 0..1 from layered drifting sines (no lines visible, just patches)
+  const field = (x, y, t) => {
+    const v = Math.sin(x * 0.031 + t * 0.53) * Math.cos(y * 0.047 - t * 0.41)
+            + 0.6 * Math.sin((x + y) * 0.019 - t * 0.77 + 1.3)
+            + 0.45 * Math.cos(x * 0.063 - y * 0.029 + t * 0.29 + 4.1);
+    return Math.max(0, Math.min(1, 0.5 + v / 3.6));
+  };
+  function draw(t) {
+    const e = FX.energy, b = FX.busy;
+    g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; g.shadowBlur = 0;
+    g.fillStyle = '#0b0a12'; g.fillRect(0, 0, W, H);
+    const cx = W / 2, cy = H / 2;
+    // glow-dot lattice
+    g.globalCompositeOperation = 'lighter';
+    let i = 0;
+    for (let y = 6; y < H; y += 11) for (let x = 6 + ((y / 11) % 2) * 5.5; x < W; x += 11) {
+      const sd = seed(++i), sd2 = seed(i + 7777);
+      const region = field(x, y, t * (1 + 0.8 * b));
+      const twinkle = Math.pow(0.5 + 0.5 * Math.sin(t * (0.9 + 2.2 * sd + 5 * b * sd2) + sd * 60), 3);
+      const a = (0.06 + 0.55 * e + 0.35 * b) * region * (0.25 + 0.75 * twinkle) + 0.04;
+      if (a < 0.03) continue;
+      const sz = 3 + 4 * region * twinkle * (0.5 + e) + 3 * b * twinkle;
+      g.globalAlpha = Math.min(1, a);
+      g.drawImage(SPR, x - sz / 2, y - sz / 2, sz, sz);
+    }
+    g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
+    // flowing waves; busy: turbulence + per-line glow strength
+    for (let k = 0; k < 5; k++) {
+      const sd = seed(1000 + k);
+      const amp = (3 + 15 * e) * (0.45 + k * 0.14) * (1 + 0.6 * b);
+      const glow = b * (0.4 + 0.6 * (0.5 + 0.5 * Math.sin(t * (3 + 4 * sd) + k * 1.7)));
+      g.lineWidth = 1 + 0.8 * glow;
+      g.shadowColor = rgba(0.9);
+      g.shadowBlur = 14 * glow;
+      g.strokeStyle = rgba(Math.min(1, 0.06 + 0.2 * e * (1 - k / 6) + 0.5 * glow));
+      g.beginPath();
+      for (let x = 0; x <= W; x += 3) {
+        const jitter = b * Math.sin(x * (0.07 + 0.03 * sd) + t * (9 + 5 * sd)) * amp * 0.35;
+        const y = cy + Math.sin(x * 0.024 + t * (0.8 + k * 0.17) + k * 1.3) * amp + Math.sin(x * 0.009 - t * 0.55 + k * 2.1) * amp * 0.6 + jitter;
+        x ? g.lineTo(x, y) : g.moveTo(x, y);
+      }
+      g.stroke();
+    }
+    g.shadowBlur = 0;
+    // quiet zone behind the centered UI
+    const r = g.createRadialGradient(cx, cy, 0, cx, cy, 92);
+    r.addColorStop(0, 'rgba(11,10,18,.88)'); r.addColorStop(1, 'rgba(11,10,18,0)');
+    g.fillStyle = r; g.fillRect(0, 0, W, H);
+  }
+  let t = 0, last = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    FX.energy += (FX.target - FX.energy) * Math.min(1, dt * 3);
+    FX.busy += (FX.busyTarget - FX.busy) * Math.min(1, dt * (FX.busyTarget > FX.busy ? 6 : 1.5));
+    t += dt * (0.35 + 0.9 * FX.energy + 0.8 * FX.busy);
+    draw(reduce.matches ? 0 : t);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+
+// ---------------- UI tasks ----------------
+const fileUrl = (p) => /^https?:/.test(p) ? p : `http://${SERVER}/files/${p.replace(/^\/+/, '')}`;
+const UI_TASKS = {
+  async fetch({ url }) { const r = await fetch(fileUrl(url)); if (!r.ok) throw new Error(`HTTP ${r.status} ${url}`); return new Uint8Array(await r.arrayBuffer()); },
+  // script: extractor source text sent by the main thread (handlers/29-layout.js), so layout fixes hot-reload
+  layout({ url, html, width, script, timeoutMs }) {
+    return new Promise(async (resolve, reject) => {
+      try {
+        if (!script) throw new Error('layout script missing (handlers/29-layout.js not loaded)');
+        let src = html, base = `http://${SERVER}/files/`;
+        if (url) { const u = fileUrl(url); const r = await fetch(u); if (!r.ok) throw new Error(`HTTP ${r.status} ${u}`); src = await r.text(); base = u.replace(/[^/]*$/, ''); }
+        const rid = Math.random().toString(36).slice(2);
+        const tag = `<script>(${script})(${JSON.stringify(rid)});<\/script>`;
+        src = /<head[^>]*>/i.test(src) ? src.replace(/<head[^>]*>/i, (h) => h + `<base href="${base}">`) : `<base href="${base}">` + src;
+        src = /<\/body>/i.test(src) ? src.replace(/<\/body>/i, tag + '</body>') : src + tag;
+        const frame = document.createElement('iframe');
+        frame.className = 'stage';
+        frame.style.width = `${width}px`;
+        let stage = 'created';
+        const done = (e) => {
+          const d = e.data;
+          if (!d || d.__nga !== rid) return;
+          if (d.stage) { stage = d.stage; $('job').textContent = `html: ${stage}`; return; }
+          removeEventListener('message', done);
+          clearTimeout(timer);
+          frame.remove();
+          d.error ? reject(new Error(d.error)) : resolve({ tree: d.tree, images: d.images });
+        };
+        const ms = timeoutMs || 90000;
+        const timer = setTimeout(() => { removeEventListener('message', done); frame.remove(); reject(new Error(`layout timeout (${ms / 1000}s) at stage "${stage}"`)); }, ms);
+        addEventListener('message', done);
+        frame.onload = () => { if (stage === 'created') stage = 'loaded (script did not start)'; };
+        document.body.appendChild(frame);
+        frame.srcdoc = src;
+      } catch (e) { reject(e); }
+    });
+  },
+  // diagnostics: run a snippet in the UI iframe (browser context)
+  async eval({ code }) { return await new Function(`return (async () => { ${code} })()`)(); },
+};
+
+</script>
+</body>
+</html>

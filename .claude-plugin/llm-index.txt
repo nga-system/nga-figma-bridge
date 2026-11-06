@@ -1,0 +1,7 @@
+# nga-figma-bridge/.claude-plugin
+ROLE: packaging · Claude Code plugin + marketplace manifests
+
+## files
+icon.png: 512px plugin icon (copy of figma-plugin/assets/icon-512.png)
+marketplace.json: marketplace "nextgenai" listing this folder as plugin nga-figma-bridge
+plugin.json: plugin manifest (name, version, mcpServers → ../.mcp.json)

@@ -1,0 +1,28 @@
+{
+  "colorCollection": "Goodwill · Color",
+  "colors": {
+    "color/brand": "#5E2BB8", "color/brand-deep": "#3B1A78", "color/ink": "#1F1A2B", "color/body": "#4A4458",
+    "color/muted": "#8A8496", "color/lavender": "#F2DCF7", "color/lavender-2": "#F6F1FC", "color/line": "#E6E0F0",
+    "color/hex": "#CBB8EF", "color/hex-2": "#E4D8F7", "color/footer": "#1C1230", "color/white": "#FFFFFF",
+    "color/footer-text": "#BDB3D1", "color/footer-muted": "#8C819F", "color/cta-sub": "#E9DDFB", "color/sunday": "#E0566B",
+    "color/kakao-text": "#191600", "color/kakao": "#FEE500", "color/naver": "#03C75A"
+  },
+  "layoutCollection": "Goodwill · Layout",
+  "modes": ["Desktop", "Tablet", "Mobile"],
+  "viewPattern": "(desktop|tablet|mobile)",
+  "viewModes": { "desktop": 0, "tablet": 1, "mobile": 2 },
+  "layout": {
+    "radius/big": [96, 64, 40], "radius/half": [48, 32, 20], "radius/small": [20, 16, 14], "radius/flat": [18, 14, 12],
+    "space/page-x": [120, 48, 20], "space/gap": [32, 24, 16], "space/section": [140, 104, 76],
+    "type/display": [124, 80, 46], "type/h2": [48, 38, 30], "type/h3": [24, 22, 20], "type/body": [18, 17, 16], "type/lead": [19, 18, 17]
+  },
+  "groups": {
+    "radius": ["radius/big", "radius/half", "radius/small", "radius/flat"],
+    "type": ["type/display", "type/h2", "type/h3", "type/body", "type/lead"],
+    "spacing": [["paddingLeft", ["space/page-x"]], ["paddingRight", ["space/page-x"]], ["itemSpacing", ["space/gap"]], ["paddingTop", ["space/section"]]]
+  },
+  "font": {
+    "family": "Pretendard",
+    "styleMap": { "Regular": "Regular", "Medium": "Medium", "Semi Bold": "SemiBold", "SemiBold": "SemiBold", "Bold": "Bold", "Extra Bold": "ExtraBold", "ExtraBold": "ExtraBold", "Black": "ExtraBold", "Light": "Regular" }
+  }
+}

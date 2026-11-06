@@ -1,0 +1,10 @@
+# nga-figma-bridge/handlers
+ROLE: plugin commands · hot-reloadable command handlers (H.register) run in the Figma sandbox
+Each file runs with H, ctx, figma in scope. Bundled into figma-plugin/code.js by build.ts and pushed live by the hub when eval is allowed. Writes must go through ctx.writable / ctx.assertWritable.
+
+## files
+00-read.js: pages, page.set, nodes, find, spec, select, selection, screenshot, audit
+10-edit.js: resize, move, rename, delete, clone, reparent, radius, fill, stroke, text, autolayout, frame, component.create, instance.create, instance.swapIn; ctx.resolveFont, ctx.variableRef
+20-vars.js: vars.list, vars.ensure, vars.bind, vars.mode, tokens.values, tokens.apply, fit.textBoxes
+29-layout.js: extractLayout source (runs in the page iframe; sent to ui.html per html call) → ctx.layoutScript
+30-html.js: html (layout tree → frames/text/images/svg, replaceId)

@@ -1,0 +1,17 @@
+{
+  "name": "nextgenai",
+  "owner": {
+    "name": "NextGenAI"
+  },
+  "plugins": [
+    {
+      "name": "nga-figma-bridge",
+      "source": "./",
+      "description": "Drive Figma from Claude Code through the NGA Figma Bridge plugin."
+    }
+  ],
+  "metadata": {
+    "description": "NextGenAI Claude Code plugins.",
+    "version": "0.2.0"
+  }
+}

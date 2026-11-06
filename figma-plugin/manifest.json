@@ -1,0 +1,14 @@
+{
+  "name": "NGA Figma Bridge",
+  "id": "nga-figma-bridge-local",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": {
+    "allowedDomains": ["none"],
+    "devAllowedDomains": ["http://localhost:7777", "ws://localhost:7777"],
+    "reasoning": "Talks only to the local NGA Figma Bridge server on this machine."
+  }
+}

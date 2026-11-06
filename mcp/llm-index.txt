@@ -1,0 +1,11 @@
+# nga-figma-bridge/mcp
+ROLE: server · MCP stdio server + hub (node APIs, bundled to server.js)
+server.js is the build output Claude Code runs; edit src/ and run `bun build.ts`. Deps (sdk, ws, zod) are inlined, so users need no node_modules.
+
+## dirs
+src/ → llm-index.txt
+
+## files
+bun.lock: lockfile
+package.json: deps + build/typecheck scripts
+server.js: GENERATED bundle (node target) — do not edit

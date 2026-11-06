@@ -1,0 +1,7 @@
+# nga-figma-bridge/mcp/src
+ROLE: server source · wire contract, hub, MCP tools
+
+## files
+hub.ts: OwnerHub (http + ws on 127.0.0.1:PORT: /plugin ws, /rpc, /status, /reload, /mount, /files incl. mounts m/<id>/), RelayHub (another session owns the port, or NGA_HUB remote), startBridge with takeover
+protocol.ts: wire contract — PROTOCOL_VERSION, ERROR_CODES, WireResult, ToPlugin/FromPlugin, HTTP_STATUS, EXIT_CODE
+server.ts: MCP tools figma_* over stdio; `serve` arg runs the hub only
